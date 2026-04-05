@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>भारत CODE — India's AI Code Assistant</title>
+  <meta name="description" content="India's AI-powered code assistant. Explain, debug, convert and review code in 7 Indian languages." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --saffron: #FF9933;
+      --green: #138808;
+      --bg: #080B14;
+      --surface: #0C1220;
+      --border: #1E2535;
+      --text: #E8E8E8;
+      --muted: #6B7280;
+      --code-green: #8EC98E;
+      --dim: #3A4560;
+    }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .flag-dots { display: flex; gap: 5px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .brand-hi  { font-size: 18px; font-weight: bold; color: var(--saffron); letter-spacing: 2px; }
+    .brand-en  { font-size: 18px; color: var(--text); letter-spacing: 2px; }
+    .tagline   { margin-left: auto; font-size: 10px; color: var(--dim); letter-spacing: 1.5px; }
+
+    /* ── BODY ── */
+    .body { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+    /* ── MODE GRID ── */
+    .mode-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+    @media (max-width: 600px) { .mode-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .mode-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 11px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .mode-btn:hover { border-color: var(--saffron); color: var(--saffron); }
+    .mode-btn.active { background: var(--saffron); border-color: var(--saffron); color: #000; }
+    .mode-icon { font-size: 16px; margin-bottom: 5px; }
+    .mode-label { font-size: 11px; font-weight: bold; letter-spacing: 0.5px; }
+
+    /* ── ROWS ── */
+    .row-label { font-size: 10px; color: var(--dim); letter-spacing: 2px; white-space: nowrap; }
+    .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+    .lang-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .lang-btn:hover { border-color: var(--green); color: var(--green); }
+    .lang-btn.active { background: var(--green); border-color: var(--green); color: #fff; }
+
+    .target-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .target-btn:hover { border-color: #3B82F6; color: #93C5FD; }
+    .target-btn.active { background: #0F2040; border-color: #3B82F6; color: #93C5FD; }
+
+    /* ── CODE INPUT ── */
+    .code-wrap { position: relative; margin-bottom: 14px; }
+    .code-badge {
+      position: absolute; top: 11px; left: 14px;
+      font-size: 9px; color: var(--dim); letter-spacing: 2px; z-index: 1;
+    }
+    textarea {
+      width: 100%; min-height: 200px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--code-green);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      padding: 32px 14px 14px;
+      resize: vertical;
+      outline: none;
+      line-height: 1.65;
+      transition: border-color 0.15s;
+    }
+    textarea:focus { border-color: #2E3F5C; }
+    textarea::placeholder { color: #22304A; }
+
+    /* ── RUN BUTTON ── */
+    #runBtn {
+      width: 100%; padding: 13px;
+      background: linear-gradient(90deg, var(--saffron), #E07000);
+      border: none; border-radius: 8px;
+      color: #000; font-size: 13px; font-family: inherit;
+      font-weight: bold; cursor: pointer;
+      letter-spacing: 2px; margin-bottom: 20px;
+      transition: opacity 0.2s;
+    }
+    #runBtn:hover { opacity: 0.9; }
+    #runBtn:disabled {
+      background: var(--border) !important;
+      color: var(--dim) !important;
+      cursor: not-allowed;
+    }
+
+    /* ── LOADER ── */
+    .loader-bar {
+      height: 2px;
+      background: linear-gradient(90deg, var(--saffron), var(--green));
+      border-radius: 2px;
+      margin-bottom: 14px;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+    /* ── OUTPUT ── */
+    .output-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .output-header {
+      font-size: 9px; color: var(--green);
+      letter-spacing: 2px; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .green-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    #outputText {
+      color: #C9D1DB;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.75;
+    }
+    #outputText.err { color: #F87171; }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 11px;
+      color: var(--dim);
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+    .footer span { color: var(--saffron); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="flag-dots">
+    <div class="dot" style="background:#FF9933"></div>
+    <div class="dot" style="background:#FFF; border:1px solid #333"></div>
+    <div class="dot" style="background:#138808"></div>
+  </div>
+  <span class="brand-hi">भारत</span>
+  <span class="brand-en">CODE</span>
+  <span class="tagline">INDIA'S AI CODE ASSISTANT</span>
+</div>
+
+<div class="body">
+
+  <!-- MODES -->
+  <div class="mode-grid" id="modeGrid"></div>
+
+  <!-- OUTPUT LANGUAGE -->
+  <div class="row">
+    <span class="row-label">LANGUAGE:</span>
+    <div id="langRow" style="display:flex; gap:7px; flex-wrap:wrap;"></div>
+  </div>
+
+  <!-- TARGET PROG LANG (translate only) -->
+  <div id="targetRow" style="display:none; margin-bottom:14px;">
+    <div class="row">
+      <span class="row-label">CONVERT TO:</span>
+      <div id="targetBtns" style="display:flex; gap:7px; flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  <!-- CODE INPUT -->
+  <div class="code-wrap">
+    <span class="code-badge">YOUR CODE</span>
+    <textarea id="codeInput"
+      placeholder="// Paste your code here...&#10;// Supports Python, JavaScript, Java, C++, and more&#10;// Ctrl+Enter to run"></textarea>
+  </div>
+
+  <!-- RUN -->
+  <button id="runBtn">◎&nbsp;&nbsp;RUN EXPLAIN CODE</button>
+
+  <!-- OUTPUT -->
+  <div id="outputArea" style="display:none;">
+    <div id="loaderBar" class="loader-bar" style="display:none;"></div>
+    <div class="output-box">
+      <div class="output-header"><span class="green-dot"></span>OUTPUT</div>
+      <pre id="outputText"></pre>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Built with <span>♥</span> for VibeCon 2026 &nbsp;·&nbsp; भारत CODE &nbsp;·&nbsp; Powered by Claude AI
+</div>
+
+<script>
+  const MODES = [
+    { id:"explain",   label:"Explain Code",   icon:"◎" },
+    { id:"debug",     label:"Debug & Fix",    icon:"⚡" },
+    { id:"translate", label:"Convert Lang",   icon:"⇄" },
+    { id:"review",    label:"Code Review",    icon:"✦" },
+  ];
+
+  const LANGS = [
+    { code:"english", native:"English" },
+    { code:"hindi",   native:"हिन्दी" },
+    { code:"marathi", native:"मराठी" },
+    { code:"tamil",   native:"தமிழ்" },
+    { code:"telugu",  native:"తెలుగు" },
+    { code:"bengali", native:"বাংলা" },
+    { code:"kannada", native:"ಕನ್ನಡ" },
+  ];
+
+  const PROG_LANGS = ["Python","JavaScript","Java","C++","Go","Rust","TypeScript","Swift"];
+
+  let mode   = "explain";
+  let lang   = "english";
+  let target = "Python";
+
+  function render() {
+    // Modes
+    document.getElementById('modeGrid').innerHTML = MODES.map(m =>
+      `<button class="mode-btn ${m.id===mode?'active':''}" onclick="setMode('${m.id}')">
+        <div class="mode-icon">${m.icon}</div>
+        <div class="mode-label">${m.label}</div>
+      </button>`
+    ).join('');
+
+    // Languages
+    document.getElementById('langRow').innerHTML = LANGS.map(l =>
+      `<button class="lang-btn ${l.code===lang?'active':''}" onclick="setLang('${l.code}')">${l.native}</button>`
+    ).join('');
+
+    // Target programming languages
+    document.getElementById('targetBtns').innerHTML = PROG_LANGS.map(t =>
+      `<button class="target-btn ${t===target?'active':''}" onclick="setTarget('${t}')">${t}</button>`
+    ).join('');
+
+    document.getElementById('targetRow').style.display = mode === 'translate' ? 'block' : 'none';
+
+    const btn = document.getElementById('runBtn');
+    btn.innerHTML = `◎&nbsp;&nbsp;RUN ${MODES.find(m2=>m2.id===mode).label.toUpperCase()}`;
+  }
+
+  function setMode(id)  { mode   = id; render(); }
+  function setLang(c)   { lang   = c;  render(); }
+  function setTarget(t) { target = t;  render(); }
+
+  function buildPrompt(code) {
+    const langNative = LANGS.find(l => l.code === lang)?.native || 'English';
+    const langLabel  = lang === 'english' ? 'English' : langNative + ' (use English for code terms/keywords)';
+    if (mode === 'explain')
+      return `Explain this code clearly in ${langLabel}. Describe what each section does and the overall purpose:\n\n\`\`\`\n${code}\n\`\`\``;
+    if (mode === 'debug')
+      return `Debug this code and respond in ${langLabel}. List all bugs found, explain each bug, and show the complete fixed version:\n\n\`\`\`\n${code}\n\`\`\``;
+    if (mode === 'translate')
+      return `Convert this code to ${target}. Respond in ${langLabel}. Show the converted code and explain key differences between the original and ${target}:\n\n\`\`\`\n${code}\n\`\`\``;
+    if (mode === 'review')
+      return `Do a thorough code review in ${langLabel}. Cover: code quality, best practices, performance, security risks, and specific improvement suggestions:\n\n\`\`\`\n${code}\n\`\`\``;
+  }
+
+  async function runAssistant() {
+    const code = document.getElementById('codeInput').value.trim();
+    if (!code) return;
+
+    const btn     = document.getElementById('runBtn');
+    const outArea = document.getElementById('outputArea');
+    const loader  = document.getElementById('loaderBar');
+    const outText = document.getElementById('outputText');
+
+    btn.disabled = true;
+    btn.textContent = '⟳  PROCESSING...';
+    btn.style.background = 'var(--border)';
+    btn.style.color = 'var(--dim)';
+
+    outArea.style.display = 'block';
+    loader.style.display  = 'block';
+    outText.className     = '';
+    outText.textContent   = '';
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: buildPrompt(code) }],
+        }),
+      });
+      const data = await res.json();
+      const text = (data.content || []).map(b => b.text || '').join('\n').trim() || 'No response received.';
+      outText.textContent = text;
+    } catch (e) {
+      outText.className   = 'err';
+      outText.textContent = '✗ Could not reach AI. Check your connection and try again.\n\nError: ' + e.message;
+    }
+
+    loader.style.display = 'none';
+    btn.disabled = false;
+    btn.style.background = 'linear-gradient(90deg,#FF9933,#E07000)';
+    btn.style.color = '#000';
+    render();
+  }
+
+  document.getElementById('runBtn').addEventListener('click', runAssistant);
+  document.getElementById('codeInput').addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') runAssistant();
+  });
+
+  render();
+</script>
+</body>
+</html>
